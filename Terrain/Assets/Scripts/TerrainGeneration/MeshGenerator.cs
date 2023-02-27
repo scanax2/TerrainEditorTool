@@ -42,7 +42,7 @@ public class MeshGenerator
         {
             for (int z = 0; z <= heightMapSize; z++)
             {
-                float y = Mathf.PerlinNoise((float)x / heightMapSize * scale + noiseOffset, (float)z / heightMapSize * scale + noiseOffset) * heightMultiplier;
+                float y = PerlinNoiseUtilities.GetYForVertex(x, z, heightMapSize, scale, noiseOffset, heightMultiplier);
                 vertices[x * (heightMapSize + 1) + z] = new Vector3(x / (float)heightMapSize * terrainSize, y, z / (float)heightMapSize * terrainSize);
             }
         }
