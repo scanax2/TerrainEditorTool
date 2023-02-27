@@ -2,23 +2,12 @@ using UnityEngine;
 
 public class MeshGenerator
 {
-    private readonly int heightMapSize;
-    private readonly int terrainSize;
-
-    private readonly float scale;
-    private readonly float noiseOffset;
-    private readonly float heightMultiplier;
+    private readonly TerrainGenerationData generationData;
 
 
-    public MeshGenerator(int heightMapSize, int terrainSize, 
-        float scale, float noiseOffset, float heightMultiplier)
+    public MeshGenerator(TerrainGenerationData generationData)
     {
-        this.heightMapSize = heightMapSize;
-        this.terrainSize = terrainSize;
-
-        this.scale = scale;
-        this.noiseOffset = noiseOffset;
-        this.heightMultiplier = heightMultiplier;
+        this.generationData = generationData;
     }
 
     public Mesh GenerateMesh()
@@ -36,13 +25,19 @@ public class MeshGenerator
 
     private Vector3[] GenerateVertices()
     {
+        int heightMapSize = generationData.HeightMapSize;
+        int terrainSize = generationData.TerrainSize;
+        float scale = generationData.Scale;
+        float noiseOffset = generationData.NoiseOffset;
+        float heightMultiplier = generationData.HeightMultiplier;
+
         Vector3[] vertices = new Vector3[(heightMapSize + 1) * (heightMapSize + 1)];
 
         for (int x = 0; x <= heightMapSize; x++)
         {
             for (int z = 0; z <= heightMapSize; z++)
             {
-                float y = PerlinNoiseUtilities.GetYForVertex(x, z, heightMapSize, scale, noiseOffset, heightMultiplier);
+                float y = PerlinNoiseUtilities.GetHeightForVertex(x, z, heightMapSize, scale, noiseOffset, heightMultiplier);
                 vertices[x * (heightMapSize + 1) + z] = new Vector3(x / (float)heightMapSize * terrainSize, y, z / (float)heightMapSize * terrainSize);
             }
         }
@@ -52,6 +47,8 @@ public class MeshGenerator
 
     private int[] GenerateTriangles()
     {
+        int heightMapSize = generationData.HeightMapSize;
+
         int[] triangles = new int[heightMapSize * heightMapSize * 6];
 
         for (int x = 0; x < heightMapSize; x++)

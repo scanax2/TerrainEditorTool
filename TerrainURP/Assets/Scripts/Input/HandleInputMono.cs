@@ -1,30 +1,27 @@
-using System;
 using UnityEngine;
 
 
 public class HandleInputMono : MonoBehaviour
 {
-    public Action OnLeftMouseButtonStartHold { get; }
-    public Action OnLeftMouseButtonEndHold { get; }
-    public Action OnLeftShiftStartHold { get; }
-    public Action OnLeftShiftEndHold { get; }
+    public bool IsHoldLeftMouse { get; private set; }
+    public bool IsHoldLeftShift { get; private set; }
 
 
     void Update()
     {
-        HandleButtonHold(KeyCode.Mouse0, OnLeftMouseButtonStartHold, OnLeftShiftEndHold);
-        HandleButtonHold(KeyCode.LeftShift, OnLeftShiftStartHold, OnLeftShiftEndHold);
+        IsHoldLeftMouse = IsHoldButton(KeyCode.Mouse0);
+        IsHoldLeftShift = IsHoldButton(KeyCode.LeftShift);
     }
 
-    private void HandleButtonHold(KeyCode keyCode, Action onStart, Action onEnd)
+    private bool IsHoldButton(KeyCode keyCode)
     {
         if (Input.GetKey(keyCode))
         {
-            onStart?.Invoke();
+            return true;
         }
         else
         {
-            onEnd?.Invoke();
+            return false;
         }
     }
 }
