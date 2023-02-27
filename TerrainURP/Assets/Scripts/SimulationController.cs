@@ -25,6 +25,7 @@ public class SimulationController : MonoBehaviour
 
     void Update()
     {
+        
         if (!handleInput.IsHoldLeftMouse)
         {
             return;
@@ -40,15 +41,12 @@ public class SimulationController : MonoBehaviour
         RaycastHit hit;
         if (Physics.Raycast(Camera.main.ScreenPointToRay(Input.mousePosition), out hit))
         {
-            int terrainSize = generationData.TerrainSize;
-
-            int x = (int)(hit.point.x / terrainSize * 2048);
-            int z = (int)(hit.point.z / terrainSize * 2048);
-
-            if (x >= 0 && x < 2048 && z >= 0 && z < 2048)
-            {
-                landscapeEditor.SculptTerrain(terrainMeshFilter.mesh, x, z, operationType);
-            }
+            landscapeEditor.SculptTerrain(hit.point.x, hit.point.z, operationType);
         }
+    }
+
+    private void LateUpdate()
+    {
+        landscapeEditor.TryGetResult(terrainMeshFilter.mesh);
     }
 }
