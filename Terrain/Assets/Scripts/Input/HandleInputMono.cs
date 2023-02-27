@@ -20,11 +20,11 @@ public class HandleInputMono : MonoBehaviour
     {
         if (Input.GetKey(keyCode))
         {
-            onStart();
+            onStart?.Invoke();
         }
         else
         {
-            onEnd();
+            onEnd?.Invoke();
         }
     }
 }

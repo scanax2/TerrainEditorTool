@@ -2,17 +2,25 @@ using UnityEngine;
 
 public class TerrainGeneratorMono : MonoBehaviour
 {
-    [SerializeField]
-    private int terrainSize = 256;
+    [Header("Main")]
+    [SerializeField] private int terrainSize = 256;
+    [SerializeField] private int heightMapSize = 2048;
 
-    [SerializeField]
-    private int heightMapSize = 2048;
+    [Header("Secondary")]
+    [SerializeField] private float scale = 50f;
+    [SerializeField] private float noiseOffset = 100f;
+    [SerializeField] private float heightMultiplier = 25f;
 
-    [SerializeField]
-    private Material terrainMaterial;
+    [SerializeField] private Material terrainMaterial;
 
 
     void Start()
+    {
+        AddNewTerrainObject();
+    }
+
+    [ContextMenu("TestGenerator")]
+    private void TestGenerator()
     {
         AddNewTerrainObject();
     }
@@ -26,12 +34,13 @@ public class TerrainGeneratorMono : MonoBehaviour
         var renderer = gameObject.AddComponent<MeshRenderer>();
         renderer.material = terrainMaterial;
 
-
+        GenerateTerrainMesh(filter);
     }
 
     private void GenerateTerrainMesh(MeshFilter filter)
     {
-        var meshGenerator = new MeshGenerator(heightMapSize, heightMapSize);
+        var meshGenerator = new MeshGenerator(
+            heightMapSize, heightMapSize, scale, noiseOffset, heightMultiplier);
 
         filter.mesh = meshGenerator.GenerateMesh();
 

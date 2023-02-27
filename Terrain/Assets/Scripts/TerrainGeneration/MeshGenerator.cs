@@ -2,18 +2,23 @@ using UnityEngine;
 
 public class MeshGenerator
 {
-    private const float SCALE = 1;
-    private const float HEIGHT_MULTIPLIER = 1;
-    private const float NOISE_OFFSET = 5;
-
     private readonly int heightMapSize;
     private readonly int terrainSize;
 
+    private readonly float scale;
+    private readonly float noiseOffset;
+    private readonly float heightMultiplier;
 
-    public MeshGenerator(int heightMapSize, int terrainSize)
+
+    public MeshGenerator(int heightMapSize, int terrainSize, 
+        float scale, float noiseOffset, float heightMultiplier)
     {
         this.heightMapSize = heightMapSize;
         this.terrainSize = terrainSize;
+
+        this.scale = scale;
+        this.noiseOffset = noiseOffset;
+        this.heightMultiplier = heightMultiplier;
     }
 
     public Mesh GenerateMesh()
@@ -37,7 +42,7 @@ public class MeshGenerator
         {
             for (int z = 0; z <= heightMapSize; z++)
             {
-                float y = Mathf.PerlinNoise((float)x / heightMapSize * SCALE + NOISE_OFFSET, (float)z / heightMapSize * SCALE + NOISE_OFFSET) * HEIGHT_MULTIPLIER;
+                float y = Mathf.PerlinNoise((float)x / heightMapSize * scale + noiseOffset, (float)z / heightMapSize * scale + noiseOffset) * heightMultiplier;
                 vertices[x * (heightMapSize + 1) + z] = new Vector3(x / (float)heightMapSize * terrainSize, y, z / (float)heightMapSize * terrainSize);
             }
         }
