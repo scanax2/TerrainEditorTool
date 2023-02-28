@@ -1,7 +1,8 @@
+using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.Rendering;
+using UnityEngine.UIElements;
 
-// TODO: add interface (call this implementation Gpu or ComputeShader)
 public class TerrainLandscapeEditor
 {
     private readonly TerrainGenerationData generationData;
@@ -12,12 +13,10 @@ public class TerrainLandscapeEditor
     // Compute shader data
     private Vector3[] vertices;
     private ComputeBuffer vertexBuffer;
-    private float[,] heights;
 
     private ComputeShader computeShader;
     private int kernelId;
     private AsyncGPUReadbackRequest request;
-    private float dispatched;
 
 
     public TerrainLandscapeEditor(TerrainGenerationData generationData, TerrainBrushData brushData)
@@ -26,37 +25,34 @@ public class TerrainLandscapeEditor
         this.brushData = brushData;
 
         // Set random noise offset to have different terrain landscapes
-        this.generationData.Scale = UnityEngine.Random.Range(10f, 20f);
-        this.generationData.NoiseOffset = UnityEngine.Random.Range(0.75f, 1.5f) * this.generationData.Scale;
+        this.generationData.Scale = Random.Range(5f, 10f);
+        this.generationData.NoiseOffset = Random.Range(0f, 1f);
     }
 
-    public void SetRandomHeightForVertices(Mesh terrainMesh)
+    public Texture2D GenerateHeightmapTexture()
     {
         int heightMapSize = generationData.HeightMapSize;
         float scale = generationData.Scale;
         float noiseOffset = generationData.NoiseOffset;
-        float heightMultiplier = generationData.HeightMultiplier;
 
-        vertices = terrainMesh.vertices;
-        heights = new float[heightMapSize + 1, heightMapSize + 1];
+        Texture2D heightmapTexture = new Texture2D(heightMapSize, heightMapSize);
 
-        for (int x = 0; x <= heightMapSize; x++)
+        for (int x = 0; x < heightMapSize; x++)
         {
-            for (int z = 0; z <= heightMapSize; z++)
+            for (int y = 0; y < heightMapSize; y++)
             {
-                float y = PerlinNoiseUtilities.GetHeightForVertex(x, z, heightMapSize, scale, noiseOffset, heightMultiplier);
-                vertices[x * (heightMapSize + 1) + z].y = y;
-                heights[x, z] = y;
+                float value = PerlinNoiseUtilities.GetHeightForVertex(heightMapSize, x, y, scale, noiseOffset);
+                Color color = new Color(value, value, value);
+                heightmapTexture.SetPixel(x, y, color);
             }
         }
 
-        terrainMesh.vertices = vertices;
-        terrainMesh.RecalculateNormals();
+        heightmapTexture.Apply();
 
-        InitComputeShader();
+        return heightmapTexture;
     }
 
-    public void SculptTerrain(float x, float z, TerrainOperationType operationType)
+    public void SculptTerrain(Texture2D heightMapTexture, float x, float z, TerrainOperationType operationType)
     {
         float digDirection = 1;
 
@@ -65,7 +61,42 @@ public class TerrainLandscapeEditor
             digDirection = -1;
         }
 
-        Request(x, z, digDirection);
+        float brushSize = brushData.BrushSize;
+        float brushStrength = brushData.BrushStrength;
+        int heightMapSize = generationData.HeightMapSize;
+        int terrainSize = generationData.TerrainSize;
+        for (int hX = 0; hX < heightMapSize; hX++)
+        {
+            float xWorld = (float)hX / heightMapSize * terrainSize;
+            for (int hY = 0; hY < heightMapSize; hY++)
+            {
+                float yWorld = (float)hY / heightMapSize * terrainSize;
+
+                var dist = Vector2.Distance(new Vector2(x, z), new Vector2(xWorld, yWorld));
+
+                if (dist < brushSize)
+                {
+                    var prevColor = heightMapTexture.GetPixel(hX, hY);
+                    float value = prevColor.grayscale;
+
+                    float falloff = 1f - dist / brushSize;
+                    float strength = brushStrength * falloff;
+
+                    value += strength * Time.deltaTime * digDirection;
+                    value = Mathf.Clamp(value, 0f, 1f);
+
+                    prevColor.r = value;
+                    prevColor.g = value;
+                    prevColor.b = value;
+
+                    heightMapTexture.SetPixel(hX, hY, prevColor);
+                }
+            }
+        }
+
+        heightMapTexture.Apply();
+
+        // Request(x, z, digDirection);
     }
 
     public void TryGetResult(Mesh terrainMesh)
@@ -82,22 +113,13 @@ public class TerrainLandscapeEditor
             return;
         }
 
-        Debug.Log($"Took time request: {Time.realtimeSinceStartup - dispatched}");
-
         var nativeArray = request.GetData<Vector3>();
         terrainMesh.MarkDynamic();
 
-        Debug.Log($"Took time request (readed data): {Time.realtimeSinceStartup - dispatched}");
-
         vertices = nativeArray.ToArray();
 
-        Debug.Log($"Took time request (copied values): {Time.realtimeSinceStartup - dispatched}");
-
         terrainMesh.SetVertices(nativeArray);
-        //terrainMesh.SetVertexBufferData(nativeArray, 0, 0, nativeArray.Length);
-        //terrainMesh.RecalculateNormals();
-
-        Debug.Log($"Took time (whole): {Time.realtimeSinceStartup - dispatched}");
+        terrainMesh.RecalculateNormals();
     }
 
     private void InitComputeShader()
@@ -118,21 +140,11 @@ public class TerrainLandscapeEditor
 
         isDispatched = true;
 
-        Debug.Log($"Prepare to dispatch");
-
         SetDataForShader(x, z, digDirection);
 
-        Debug.Log($"Data set");
-
-        computeShader.Dispatch(kernelId, Mathf.CeilToInt(vertices.Length / 1024), 1, 1);
-
-        Debug.Log($"Dispatched !");
+        computeShader.Dispatch(kernelId, Mathf.CeilToInt(vertices.Length / 64), 1, 1);
 
         request = AsyncGPUReadback.Request(vertexBuffer);
-
-        Debug.Log($"Request sended");
-
-        dispatched = Time.realtimeSinceStartup;
     }
 
     private void SetDataForShader(float x, float z, float digDirection)

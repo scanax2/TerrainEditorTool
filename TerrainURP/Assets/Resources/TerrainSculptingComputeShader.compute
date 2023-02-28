@@ -9,7 +9,7 @@ float3 brushPosition;
 float brushRadius;
 float brushStrength;
 
-[numthreads(1024, 1, 1)]
+[numthreads(64, 1, 1)]
 void SculptTerrain(uint3 id : SV_DispatchThreadID) 
 {
 

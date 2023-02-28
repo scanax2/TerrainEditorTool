@@ -2,12 +2,12 @@ using UnityEngine;
 
 public class MeshGenerator
 {
-    private readonly TerrainGenerationData generationData;
+    private readonly int terrainSize;
 
 
-    public MeshGenerator(TerrainGenerationData generationData)
+    public MeshGenerator(int terrainSize)
     {
-        this.generationData = generationData;
+        this.terrainSize = terrainSize;
     }
 
     public Mesh GenerateMesh()
@@ -15,7 +15,9 @@ public class MeshGenerator
         Mesh terrainMesh = new Mesh();
         terrainMesh.name = "TerrainMesh";
         terrainMesh.indexFormat = UnityEngine.Rendering.IndexFormat.UInt32;
-        terrainMesh.vertices = GenerateVertices();
+        Vector2[] uvs;
+        terrainMesh.vertices = GenerateVertices(out uvs);
+        terrainMesh.uv = uvs;
         terrainMesh.triangles = GenerateTriangles();
         terrainMesh.RecalculateBounds();
         terrainMesh.RecalculateNormals();
@@ -23,47 +25,40 @@ public class MeshGenerator
         return terrainMesh;
     }
 
-    private Vector3[] GenerateVertices()
+    private Vector3[] GenerateVertices(out Vector2[] uvs)
     {
-        int heightMapSize = generationData.HeightMapSize;
-        int terrainSize = generationData.TerrainSize;
-        float scale = generationData.Scale;
-        float noiseOffset = generationData.NoiseOffset;
-        float heightMultiplier = generationData.HeightMultiplier;
+        Vector3[] vertices = new Vector3[(terrainSize + 1) * (terrainSize + 1)];
+        uvs = new Vector2[vertices.Length];
 
-        Vector3[] vertices = new Vector3[(heightMapSize + 1) * (heightMapSize + 1)];
-
-        for (int x = 0; x <= heightMapSize; x++)
+        for (int x = 0; x <= terrainSize; x++)
         {
-            for (int z = 0; z <= heightMapSize; z++)
-            {
-                float y = PerlinNoiseUtilities.GetHeightForVertex(x, z, heightMapSize, scale, noiseOffset, heightMultiplier);
-                vertices[x * (heightMapSize + 1) + z] = new Vector3(x / (float)heightMapSize * terrainSize, y, z / (float)heightMapSize * terrainSize);
+            for (int z = 0; z <= terrainSize; z++)
+            {                
+                vertices[x * (terrainSize + 1) + z] = new Vector3(x, 0, z);
+                uvs[x * (terrainSize + 1) + z] = new Vector2((float)x / terrainSize, (float)z / terrainSize);
             }
         }
 
         return vertices;
-    } 
+    }
 
     private int[] GenerateTriangles()
     {
-        int heightMapSize = generationData.HeightMapSize;
+        int[] triangles = new int[terrainSize * terrainSize * 6];
 
-        int[] triangles = new int[heightMapSize * heightMapSize * 6];
-
-        for (int x = 0; x < heightMapSize; x++)
+        for (int x = 0; x < terrainSize; x++)
         {
-            for (int z = 0; z < heightMapSize; z++)
+            for (int z = 0; z < terrainSize; z++)
             {
-                int vertexIndex = x * (heightMapSize + 1) + z;
-                int triangleIndex = (x * heightMapSize + z) * 6;
+                int vertexIndex = x * (terrainSize + 1) + z;
+                int triangleIndex = (x * terrainSize + z) * 6;
 
                 triangles[triangleIndex] = vertexIndex;
                 triangles[triangleIndex + 1] = vertexIndex + 1;
-                triangles[triangleIndex + 2] = vertexIndex + heightMapSize + 1;
+                triangles[triangleIndex + 2] = vertexIndex + terrainSize + 1;
                 triangles[triangleIndex + 3] = vertexIndex + 1;
-                triangles[triangleIndex + 4] = vertexIndex + heightMapSize + 2;
-                triangles[triangleIndex + 5] = vertexIndex + heightMapSize + 1;
+                triangles[triangleIndex + 4] = vertexIndex + terrainSize + 2;
+                triangles[triangleIndex + 5] = vertexIndex + terrainSize + 1;
             }
         }
 

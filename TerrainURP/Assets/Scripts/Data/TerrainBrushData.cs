@@ -5,6 +5,7 @@ using UnityEngine;
 public class TerrainBrushData
 {
     [SerializeField] private float brushSize;
+    [Range(0f, 1f)]
     [SerializeField] private float brushStrength;
 
 

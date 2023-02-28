@@ -2,14 +2,13 @@ using UnityEngine;
 
 public static class PerlinNoiseUtilities
 {
-    public static float GetHeightForVertex(int x, int z, float heightMapSize, 
-        float scale, float noiseOffset, float heightMultiplier)
+    public static float GetHeightForVertex(int heightMapSize, int x, int y, float scale, float noiseOffset)
     {
-        float perlinX = (float)x / heightMapSize * scale + noiseOffset;
-        float perlinZ = (float)z / heightMapSize * scale + noiseOffset;
+        float perlinX = ((float)x/heightMapSize + noiseOffset) * scale;
+        float perlinY = ((float)y/ heightMapSize + noiseOffset) * scale;
 
-        float y = Mathf.PerlinNoise(perlinX, perlinZ) * heightMultiplier;
+        float perlin = Mathf.PerlinNoise(perlinX, perlinY);
 
-        return y;
+        return perlin;
     }
 }

@@ -33,7 +33,7 @@ public class TerrainGeneratorMono : MonoBehaviour
     private void GenerateTerrainMesh(MeshFilter filter)
     {
         var generationData = simulationController.GenerationData;
-        var meshGenerator = new MeshGenerator(generationData);
+        var meshGenerator = new MeshGenerator(generationData.TerrainSize);
 
         filter.mesh = meshGenerator.GenerateMesh();
     }
