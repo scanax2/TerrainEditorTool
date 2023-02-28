@@ -1,0 +1,27 @@
+#pragma kernel SculptTerrain
+
+RWTexture2D<float> heightMapTexture;
+
+float terrainSize;
+float2 heightMapSize;
+
+float2 brushPosition;
+float brushRadius;
+float brushStrength;
+
+[numthreads(8, 8, 1)]
+void SculptTerrain(uint3 id : SV_DispatchThreadID)
+{
+    uint2 texelId = id.xy;
+
+    float2 pixelPosition = (float2(texelId) / heightMapSize) * terrainSize;
+    float dist = distance(pixelPosition, brushPosition);
+    if (dist < brushRadius)
+    {
+        float falloff = 1 - dist / brushRadius;
+        float height = heightMapTexture[texelId];
+        float deltaHeight = (brushStrength * falloff);
+        height += deltaHeight;
+        heightMapTexture[texelId] = height;
+    }
+}

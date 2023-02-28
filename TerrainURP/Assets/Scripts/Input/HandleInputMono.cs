@@ -1,6 +1,5 @@
 using UnityEngine;
 
-
 public class HandleInputMono : MonoBehaviour
 {
     public bool IsHoldLeftMouse { get; private set; }

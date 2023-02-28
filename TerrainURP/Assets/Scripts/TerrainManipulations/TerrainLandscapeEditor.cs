@@ -1,28 +1,28 @@
-using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.Rendering;
-using UnityEngine.UIElements;
 
-public class TerrainLandscapeEditor
+public class TerrainLandscapeEditor : ITerrainLandscapeEditor
 {
     private readonly TerrainGenerationData generationData;
     private readonly TerrainBrushData brushData;
+    private readonly ComputeShader computeShader;
+    private readonly int kernelId;
+
+    private RenderTexture renderTexture;
+    private AsyncGPUReadbackRequest request;
 
     private bool isDispatched;
 
-    // Render texture to hold the updated texture
-    RenderTexture renderTexture;
-    private ComputeShader computeShader;
-    private int kernelId;
-    private AsyncGPUReadbackRequest request;
 
-
-    public TerrainLandscapeEditor(TerrainGenerationData generationData, TerrainBrushData brushData)
+    public TerrainLandscapeEditor(ComputeShader computeShader, TerrainGenerationData generationData, TerrainBrushData brushData)
     {
+        this.computeShader = computeShader;
+        kernelId = computeShader.FindKernel("SculptTerrain");
+
         this.generationData = generationData;
         this.brushData = brushData;
 
-        // Set random noise offset to have different terrain landscapes
+        // Set random noise offset for different terrain landscapes
         this.generationData.Scale = Random.Range(5f, 10f);
         this.generationData.NoiseOffset = Random.Range(0f, 1f);
     }
@@ -39,7 +39,9 @@ public class TerrainLandscapeEditor
         {
             for (int y = 0; y < heightMapSize; y++)
             {
-                float value = PerlinNoiseUtilities.GetHeightForVertex(heightMapSize, x, y, scale, noiseOffset);
+                float value = PerlinNoiseUtilities.GetHeightForVertex(
+                    heightMapSize, x, y, scale, noiseOffset);
+
                 Color color = new Color(value, value, value);
                 heightmapTexture.SetPixel(x, y, color);
             }
@@ -53,8 +55,6 @@ public class TerrainLandscapeEditor
 
         Graphics.Blit(heightmapTexture, renderTexture);
 
-        InitComputeShader();
-
         return renderTexture;
     }
 
@@ -67,10 +67,10 @@ public class TerrainLandscapeEditor
             digDirection = -1;
         }
 
-        Request(x, z, digDirection);
+        RequestSculpt(x, z, digDirection);
     }
 
-    public void TryGetResult(RenderTexture texture)
+    public void UpdateRequest()
     {
         if (!isDispatched || !request.done)
         {
@@ -85,13 +85,7 @@ public class TerrainLandscapeEditor
         }
     }
 
-    private void InitComputeShader()
-    {
-        computeShader = (ComputeShader)Resources.Load("TerrainSculptingComputeShader");
-        kernelId = computeShader.FindKernel("SculptTerrain");
-    }
-
-    private void Request(float x, float z, float digDirection)
+    private void RequestSculpt(float x, float z, float digDirection)
     {
         if (isDispatched)
         {

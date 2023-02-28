@@ -11,7 +11,10 @@ public class TerrainGenerationData
     /// Value in pixels PxP (2048x2048)
     /// </summary>
     [SerializeField] private int heightMapSize = 2048;
-    [SerializeField] private float scale = 10f;
+    /// <summary>
+    /// Defines perlin noise density
+    /// </summary>
+    [SerializeField] private float scale = 7f;
     [SerializeField] private float noiseOffset = 75f;
     [SerializeField] private float maxHeight = 75f;
 

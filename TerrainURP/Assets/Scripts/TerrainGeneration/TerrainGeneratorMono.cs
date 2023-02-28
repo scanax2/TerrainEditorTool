@@ -1,5 +1,8 @@
 using UnityEngine;
 
+/// <summary>
+/// Helper class for mesh generation
+/// </summary>
 public class TerrainGeneratorMono : MonoBehaviour
 {
     [SerializeField] private Material terrainMaterial;
@@ -27,7 +30,11 @@ public class TerrainGeneratorMono : MonoBehaviour
         var renderer = gameObject.AddComponent<MeshRenderer>();
         renderer.material = terrainMaterial;
 
+        gameObject.AddComponent<BoxCollider>();
+
         GenerateTerrainMesh(filter);
+
+        simulationController.MeshRenderer = renderer;
     }
 
     private void GenerateTerrainMesh(MeshFilter filter)
