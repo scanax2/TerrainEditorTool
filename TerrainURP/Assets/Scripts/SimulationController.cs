@@ -78,4 +78,15 @@ public class SimulationController : MonoBehaviour
 
         brushStrengthValueText.text = brushStrengthSlider.value.ToString();
     }
+
+    public void RegenerateHeightMap()
+    {
+        landscapeEditor = new TerrainLandscapeEditor(computeShader, generationData, brushData);
+        var heightMapTexture = landscapeEditor.GenerateHeightmapTexture();
+
+        meshRenderer.material.SetTexture("_HeightMapTexture", heightMapTexture);
+        meshRenderer.material.SetFloat("_Height", generationData.MaxHeight);
+
+        meshRenderer.gameObject.SetActive(true);
+    }
 }
