@@ -11,7 +11,7 @@ public class SimulationController : MonoBehaviour
     [SerializeField] private TerrainGenerationData generationData;
     [SerializeField] private TerrainBrushData brushData;
 
-    private Texture2D heightMapTexture;
+    private RenderTexture heightMapTexture;
     private TerrainLandscapeEditor landscapeEditor;
 
     public TerrainGenerationData GenerationData { get => generationData; }
@@ -45,12 +45,12 @@ public class SimulationController : MonoBehaviour
         RaycastHit hit;
         if (Physics.Raycast(Camera.main.ScreenPointToRay(Input.mousePosition), out hit))
         {
-            landscapeEditor.SculptTerrain(heightMapTexture, hit.point.x, hit.point.z, operationType);
+            landscapeEditor.SculptTerrain(hit.point.x, hit.point.z, operationType);
         }
     }
 
     private void LateUpdate()
     {
-        landscapeEditor.TryGetResult(terrainMeshFilter.mesh);
+        landscapeEditor.TryGetResult(heightMapTexture);
     }
 }

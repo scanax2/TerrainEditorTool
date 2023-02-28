@@ -10,10 +10,8 @@ public class TerrainLandscapeEditor
 
     private bool isDispatched;
 
-    // Compute shader data
-    private Vector3[] vertices;
-    private ComputeBuffer vertexBuffer;
-
+    // Render texture to hold the updated texture
+    RenderTexture renderTexture;
     private ComputeShader computeShader;
     private int kernelId;
     private AsyncGPUReadbackRequest request;
@@ -29,7 +27,7 @@ public class TerrainLandscapeEditor
         this.generationData.NoiseOffset = Random.Range(0f, 1f);
     }
 
-    public Texture2D GenerateHeightmapTexture()
+    public RenderTexture GenerateHeightmapTexture()
     {
         int heightMapSize = generationData.HeightMapSize;
         float scale = generationData.Scale;
@@ -49,10 +47,18 @@ public class TerrainLandscapeEditor
 
         heightmapTexture.Apply();
 
-        return heightmapTexture;
+        renderTexture = new RenderTexture(heightMapSize, heightMapSize, 0);
+        renderTexture.wrapMode = TextureWrapMode.Clamp;
+        renderTexture.enableRandomWrite = true;
+
+        Graphics.Blit(heightmapTexture, renderTexture);
+
+        InitComputeShader();
+
+        return renderTexture;
     }
 
-    public void SculptTerrain(Texture2D heightMapTexture, float x, float z, TerrainOperationType operationType)
+    public void SculptTerrain(float x, float z, TerrainOperationType operationType)
     {
         float digDirection = 1;
 
@@ -61,45 +67,10 @@ public class TerrainLandscapeEditor
             digDirection = -1;
         }
 
-        float brushSize = brushData.BrushSize;
-        float brushStrength = brushData.BrushStrength;
-        int heightMapSize = generationData.HeightMapSize;
-        int terrainSize = generationData.TerrainSize;
-        for (int hX = 0; hX < heightMapSize; hX++)
-        {
-            float xWorld = (float)hX / heightMapSize * terrainSize;
-            for (int hY = 0; hY < heightMapSize; hY++)
-            {
-                float yWorld = (float)hY / heightMapSize * terrainSize;
-
-                var dist = Vector2.Distance(new Vector2(x, z), new Vector2(xWorld, yWorld));
-
-                if (dist < brushSize)
-                {
-                    var prevColor = heightMapTexture.GetPixel(hX, hY);
-                    float value = prevColor.grayscale;
-
-                    float falloff = 1f - dist / brushSize;
-                    float strength = brushStrength * falloff;
-
-                    value += strength * Time.deltaTime * digDirection;
-                    value = Mathf.Clamp(value, 0f, 1f);
-
-                    prevColor.r = value;
-                    prevColor.g = value;
-                    prevColor.b = value;
-
-                    heightMapTexture.SetPixel(hX, hY, prevColor);
-                }
-            }
-        }
-
-        heightMapTexture.Apply();
-
-        // Request(x, z, digDirection);
+        Request(x, z, digDirection);
     }
 
-    public void TryGetResult(Mesh terrainMesh)
+    public void TryGetResult(RenderTexture texture)
     {
         if (!isDispatched || !request.done)
         {
@@ -112,23 +83,12 @@ public class TerrainLandscapeEditor
         {
             return;
         }
-
-        var nativeArray = request.GetData<Vector3>();
-        terrainMesh.MarkDynamic();
-
-        vertices = nativeArray.ToArray();
-
-        terrainMesh.SetVertices(nativeArray);
-        terrainMesh.RecalculateNormals();
     }
 
     private void InitComputeShader()
     {
         computeShader = (ComputeShader)Resources.Load("TerrainSculptingComputeShader");
         kernelId = computeShader.FindKernel("SculptTerrain");
-
-        vertexBuffer = new ComputeBuffer(vertices.Length, sizeof(float) * 3);
-        vertexBuffer.SetData(vertices);
     }
 
     private void Request(float x, float z, float digDirection)
@@ -142,16 +102,18 @@ public class TerrainLandscapeEditor
 
         SetDataForShader(x, z, digDirection);
 
-        computeShader.Dispatch(kernelId, Mathf.CeilToInt(vertices.Length / 64), 1, 1);
-
-        request = AsyncGPUReadback.Request(vertexBuffer);
+        int heightMapSize = generationData.HeightMapSize;
+        computeShader.Dispatch(kernelId, Mathf.CeilToInt(heightMapSize / 8), Mathf.CeilToInt(heightMapSize / 8), 1);
+        request = AsyncGPUReadback.Request(renderTexture);
     }
 
     private void SetDataForShader(float x, float z, float digDirection)
     {
-        computeShader.SetBuffer(kernelId, "vertices", vertexBuffer);
+        computeShader.SetTexture(0, "heightMapTexture", renderTexture);
+        computeShader.SetFloat("terrainSize", generationData.TerrainSize);
+        computeShader.SetVector("heightMapSize", new Vector2(generationData.HeightMapSize, generationData.HeightMapSize));
+        computeShader.SetVector("brushPosition", new Vector2(x, z));
         computeShader.SetFloat("brushRadius", brushData.BrushSize);
         computeShader.SetFloat("brushStrength", brushData.BrushStrength * digDirection);
-        computeShader.SetVector("brushPosition", new Vector3(x, 0, z));
     }
 }

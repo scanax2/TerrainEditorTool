@@ -1,26 +1,30 @@
+// TerrainSculptingComputeShader.compute
+
 #pragma kernel SculptTerrain
 
-struct Vertex {
-    float3 position;
-};
+RWTexture2D<float> heightMapTexture;
 
-RWStructuredBuffer<Vertex> vertices;
-float3 brushPosition;
+float terrainSize;
+float2 heightMapSize;
+
+float2 brushPosition;
 float brushRadius;
 float brushStrength;
 
-[numthreads(64, 1, 1)]
-void SculptTerrain(uint3 id : SV_DispatchThreadID) 
+[numthreads(8, 8, 1)]
+void SculptTerrain(uint3 id : SV_DispatchThreadID)
 {
+    uint2 texelId = id.xy;
 
-    Vertex vertex = vertices[id.x];
-    float dist = distance(vertex.position.xz, brushPosition.xz);
-
-    if (dist <= brushRadius) {
-        float falloff = 1 - dist / brushRadius;
-        float strength = brushStrength * falloff;
-        vertex.position.y += strength;
+    float2 pixelPosition = (float2(texelId) / heightMapSize) * terrainSize;
+    //float2 pixelPosition = float2(texelId.x / heightMapSize.x)
+    float dist = distance(pixelPosition, brushPosition);
+    if (dist < brushRadius)
+    {
+        float falloff = smoothstep(brushRadius, 0.0f, dist);
+        float height = heightMapTexture[texelId];
+        float deltaHeight = (brushStrength * falloff);
+        height += deltaHeight;
+        heightMapTexture[texelId] = height;
     }
-
-    vertices[id.x] = vertex;
 }
